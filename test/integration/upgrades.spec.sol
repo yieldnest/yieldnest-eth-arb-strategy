@@ -1,27 +1,26 @@
+// SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.28;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {BaseIntegrationTest} from "./BaseIntegrationTest.sol";
 import {RewardsSweeper} from "lib/yieldnest-flex-strategy/src/utils/RewardsSweeper.sol";
 import {TransparentUpgradeableProxy} from
     "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UpgradeUtils} from "lib/yieldnest-flex-strategy/script/UpgradeUtils.sol";
-import {ProxyUtils} from "lib/yieldnest-vault/script/ProxyUtils.sol";
 import {AccountingModule} from "lib/yieldnest-flex-strategy/src/AccountingModule.sol";
 import {AccountingToken} from "lib/yieldnest-flex-strategy/src/AccountingToken.sol";
 import {FlexStrategy} from "lib/yieldnest-flex-strategy/src/FlexStrategy.sol";
+import {ProxyUtils} from "lib/yieldnest-vault/script/ProxyUtils.sol";
 
 contract UpgradesTest is BaseIntegrationTest {
-    //DeployRWAStrategy strategy;
-
     function setUp() public override {
         super.setUp();
     }
 
     function testDeploymentParameters() public {
-        // // Check if the deployment parameters are set correctly
-        assertEq(strategy.symbol(), "ynFlex-USDC-ynRWAx-SPV1");
-        assertEq(strategy.asset(), 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        // Check if the deployment parameters are set correctly
+        assertEq(strategy.symbol(), "ynFlex-WETH-ynETHx-ARB1");
+        assertEq(strategy.asset(), 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH address
     }
 
     function testRewardsSweeperUpgrade() public {
@@ -35,8 +34,10 @@ contract UpgradesTest is BaseIntegrationTest {
             address(newRewardsSweeperImplementation)
         );
 
+        // Get implementation address from proxy
+        address currentImplementation = ProxyUtils.getImplementation(address(deployment.rewardsSweeper()));
         assertEq(
-            address(ProxyUtils.getImplementation(address(deployment.rewardsSweeper()))),
+            currentImplementation,
             address(newRewardsSweeperImplementation),
             "Rewards Sweeper implementation address mismatch after upgrade"
         );
@@ -53,10 +54,9 @@ contract UpgradesTest is BaseIntegrationTest {
             address(newAccountingModuleImplementation)
         );
 
-        assertEq(
-            address(ProxyUtils.getImplementation(address(deployment.accountingModule()))),
-            address(newAccountingModuleImplementation)
-        );
+        // Get implementation address from proxy
+        address currentImplementation = ProxyUtils.getImplementation(address(deployment.accountingModule()));
+        assertEq(currentImplementation, address(newAccountingModuleImplementation));
     }
 
     function testAccountingTokenUpgrade() public {
@@ -70,10 +70,9 @@ contract UpgradesTest is BaseIntegrationTest {
             address(newAccountingTokenImplementation)
         );
 
-        assertEq(
-            address(ProxyUtils.getImplementation(address(deployment.accountingToken()))),
-            address(newAccountingTokenImplementation)
-        );
+        // Get implementation address from proxy
+        address currentImplementation = ProxyUtils.getImplementation(address(deployment.accountingToken()));
+        assertEq(currentImplementation, address(newAccountingTokenImplementation));
     }
 
     function testFlexStrategyUpgrade() public {
@@ -87,9 +86,8 @@ contract UpgradesTest is BaseIntegrationTest {
             address(newFlexStrategyImplementation)
         );
 
-        assertEq(
-            address(ProxyUtils.getImplementation(address(deployment.strategy()))),
-            address(newFlexStrategyImplementation)
-        );
+        // Get implementation address from proxy
+        address currentImplementation = ProxyUtils.getImplementation(address(deployment.strategy()));
+        assertEq(currentImplementation, address(newFlexStrategyImplementation));
     }
 }

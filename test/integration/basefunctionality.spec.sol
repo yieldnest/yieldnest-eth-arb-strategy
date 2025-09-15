@@ -1,11 +1,11 @@
+// SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.28;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {BaseIntegrationTest} from "./BaseIntegrationTest.sol";
 import {TransparentUpgradeableProxy} from
     "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UpgradeUtils} from "lib/yieldnest-flex-strategy/script/UpgradeUtils.sol";
-import {ProxyUtils} from "lib/yieldnest-vault/script/ProxyUtils.sol";
 import {AccountingModule, IAccountingModule} from "lib/yieldnest-flex-strategy/src/AccountingModule.sol";
 import {AccountingToken} from "lib/yieldnest-flex-strategy/src/AccountingToken.sol";
 import {FlexStrategy} from "lib/yieldnest-flex-strategy/src/FlexStrategy.sol";
@@ -14,57 +14,50 @@ import {DeployFlexStrategy, RewardsSweeper} from "lib/yieldnest-flex-strategy/sc
 import {IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract BaseFunctionalityTest is BaseIntegrationTest {
-    address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC token address
-    uint256 constant DEPOSIT_AMOUNT = 1000 * 10 ** 6; // 1000 USDC with 6 decimals
+    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH token address
+    uint256 public constant DEPOSIT_AMOUNT = 1000 * 10 ** 18; // 1000 WETH with 18 decimals
 
     address public constant DEPOSITOR = address(0x1234567890123456789012345678901234567890);
 
     function setUp() public override {
         super.setUp();
-        // Prank as admin to grant ALLOCATOR role to Alice
-        vm.startPrank(deployment.actors().ADMIN());
-        deployment.strategy().grantRole(deployment.strategy().ALLOCATOR_ROLE(), DEPOSITOR);
+        // Prank as admin to grant ALLOCATOR role to DEPOSITOR
+        vm.startPrank(accountingModule.safe());
+        strategy.grantRole(strategy.ALLOCATOR_ROLE(), DEPOSITOR);
         vm.stopPrank();
     }
 
-    function test_deposit_usdc_ynrwax_spv1() public {
-        // Get USDC token and strategy
-        IERC20 usdc = IERC20(USDC_ADDRESS); // USDC on mainnet
-        FlexStrategy strategy = FlexStrategy(payable(address(deployment.strategy()))); // Using index i for strategy selection
+    function test_deposit_weth_ynethx_arb1() public {
+        // Get WETH token and strategy
+        IERC20 weth = IERC20(WETH_ADDRESS); // WETH on mainnet
 
-        // Grant ALLOCATOR_ROLE to depositor
-        vm.startPrank(deployment.actors().ADMIN());
-        FlexStrategy(payable(address(strategy))).grantRole(
-            FlexStrategy(payable(address(strategy))).ALLOCATOR_ROLE(), DEPOSITOR
-        );
-        vm.stopPrank();
-        // 1 million USDC (6 decimals)
-        uint256 depositAmount = 1_000_000 * 1e6;
+        // 1000 WETH (18 decimals)
+        uint256 depositAmount = 1_000 * 1e18;
 
-        // Deal USDC to depositor
-        deal(USDC_ADDRESS, DEPOSITOR, depositAmount);
+        // Deal WETH to depositor
+        deal(WETH_ADDRESS, DEPOSITOR, depositAmount);
 
         // Switch to depositor for the deposit
         vm.startPrank(DEPOSITOR);
 
-        // Approve strategy to spend USDC
-        usdc.approve(address(strategy), depositAmount);
+        // Approve strategy to spend WETH
+        weth.approve(address(strategy), depositAmount);
 
         // Get balances before deposit
-        uint256 usdcBalanceBefore = usdc.balanceOf(DEPOSITOR);
+        uint256 wethBalanceBefore = weth.balanceOf(DEPOSITOR);
         uint256 sharesBefore = strategy.balanceOf(DEPOSITOR);
         uint256 totalAssetsBefore = strategy.totalAssets();
         // Get safe balance before deposit
-        uint256 safeUsdcBalanceBefore = usdc.balanceOf(deployment.safe());
+        uint256 safeWethBalanceBefore = weth.balanceOf(accountingModule.safe());
 
         // Perform deposit
         uint256 shares = strategy.deposit(depositAmount, DEPOSITOR);
 
         // Verify deposit was successful
         assertEq(
-            usdc.balanceOf(DEPOSITOR),
-            usdcBalanceBefore - depositAmount,
-            "USDC balance should decrease by deposit amount"
+            weth.balanceOf(DEPOSITOR),
+            wethBalanceBefore - depositAmount,
+            "WETH balance should decrease by deposit amount"
         );
         assertEq(strategy.balanceOf(DEPOSITOR), sharesBefore + shares, "Shares balance should increase");
         assertGt(shares, 0, "Should receive shares for deposit");
@@ -74,32 +67,32 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
             "Total assets should increase by at least deposit amount"
         );
 
-        // Assert balance of USDC in safe is now increased
-        uint256 safeUsdcBalanceAfter = usdc.balanceOf(deployment.safe());
+        // Assert balance of WETH in safe is now increased
+        uint256 safeWethBalanceAfter = weth.balanceOf(accountingModule.safe());
         assertGe(
-            safeUsdcBalanceAfter,
-            safeUsdcBalanceBefore + depositAmount,
-            "Safe USDC balance should increase by at least deposit amount"
+            safeWethBalanceAfter,
+            safeWethBalanceBefore + depositAmount,
+            "Safe WETH balance should increase by at least deposit amount"
         );
 
         vm.stopPrank();
 
         // Test moving money from SAFE to a random receiver
         address randomReceiver = address(0x123456789);
-        uint256 safeBalanceBeforeTransfer = usdc.balanceOf(deployment.safe());
+        uint256 safeBalanceBeforeTransfer = weth.balanceOf(accountingModule.safe());
         uint256 totalAssetsBeforeTransfer = strategy.totalAssets();
 
         // Move money from SAFE to random receiver
-        vm.startPrank(deployment.safe());
-        usdc.transfer(randomReceiver, safeBalanceBeforeTransfer);
+        vm.startPrank(accountingModule.safe());
+        weth.transfer(randomReceiver, safeBalanceBeforeTransfer);
         vm.stopPrank();
 
         // Verify the transfer was successful
-        assertEq(usdc.balanceOf(deployment.safe()), 0, "SAFE should have zero USDC balance after transfer");
+        assertEq(weth.balanceOf(accountingModule.safe()), 0, "SAFE should have zero WETH balance after transfer");
         assertEq(
-            usdc.balanceOf(randomReceiver),
+            weth.balanceOf(randomReceiver),
             safeBalanceBeforeTransfer,
-            "Random receiver should have received all USDC from SAFE"
+            "Random receiver should have received all WETH from SAFE"
         );
 
         strategy.processAccounting();
@@ -114,18 +107,10 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
     }
 
     function test_deposit_and_withdraw_roundtrip() public {
-        FlexStrategy strategy = FlexStrategy(payable(address(deployment.strategy()))); // Using index i for strategy selection
         IERC20 asset = IERC20(strategy.asset());
 
-        // Grant DEPOSITOR the ALLOCATOR_ROLE
-        vm.startPrank(deployment.actors().ADMIN());
-        FlexStrategy(payable(address(strategy))).grantRole(
-            FlexStrategy(payable(address(strategy))).ALLOCATOR_ROLE(), DEPOSITOR
-        );
-        vm.stopPrank();
-
-        // 1 million of the asset (assuming 6 decimals, but this will work for any decimals)
-        uint256 depositAmount = 1_000_000 * 10 ** IERC20Metadata(address(asset)).decimals();
+        // 1000 of the asset (assuming 18 decimals for WETH)
+        uint256 depositAmount = 1_000 * 10 ** IERC20Metadata(address(asset)).decimals();
 
         // Deal asset to depositor
         deal(address(asset), DEPOSITOR, depositAmount);
@@ -175,24 +160,24 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
     }
 
     function test_deposit_and_inject_rewards_with_rewards_sweeper() public {
-        // Get USDC token and strategy
-        IERC20 usdc = IERC20(USDC_ADDRESS);
-        FlexStrategy strategy = FlexStrategy(payable(address(deployment.strategy())));
-        RewardsSweeper rewardsSweeper = deployment.rewardsSweeper();
+        // Get WETH token and strategy
+        IERC20 weth = IERC20(WETH_ADDRESS);
+        DeployFlexStrategy deployFlexStrategy = new DeployFlexStrategy();
+        RewardsSweeper rewardsSweeper = deployFlexStrategy.rewardsSweeper();
 
-        // 1 million USDC (6 decimals) and 100k USDC reward
-        uint256 depositAmount = 1_000_000 * 1e6;
-        uint256 rewardAmount = 1_000 * 1e6;
+        // 1000 WETH (18 decimals) and 10 WETH reward
+        uint256 depositAmount = 1_000 * 1e18;
+        uint256 rewardAmount = 10 * 1e18;
 
-        // Deal USDC to depositor and rewards sweeper
-        deal(USDC_ADDRESS, DEPOSITOR, depositAmount);
-        deal(USDC_ADDRESS, address(rewardsSweeper), rewardAmount);
+        // Deal WETH to depositor and rewards sweeper
+        deal(WETH_ADDRESS, DEPOSITOR, depositAmount);
+        deal(WETH_ADDRESS, address(rewardsSweeper), rewardAmount);
 
         // Switch to depositor for the deposit
         vm.startPrank(DEPOSITOR);
 
-        // Approve strategy to spend USDC
-        usdc.approve(address(strategy), depositAmount);
+        // Approve strategy to spend WETH
+        weth.approve(address(strategy), depositAmount);
 
         // Get balances before deposit
         uint256 totalAssetsBefore = strategy.totalAssets();
@@ -221,7 +206,7 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
         vm.warp(block.timestamp + 30 days);
 
         // Inject rewards using rewards sweeper
-        vm.startPrank(deployment.actors().PROCESSOR());
+        vm.startPrank(accountingModule.safe());
         rewardsSweeper.sweepRewards(rewardAmount);
         vm.stopPrank();
 
@@ -252,25 +237,25 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
             "Depositor should be able to redeem more than they deposited due to rewards"
         );
 
-        // Verify that the rewards sweeper has no USDC balance after sweeping
+        // Verify that the rewards sweeper has no WETH balance after sweeping
         assertEq(
-            usdc.balanceOf(address(rewardsSweeper)), 0, "Rewards sweeper should have zero USDC balance after sweeping"
+            weth.balanceOf(address(rewardsSweeper)), 0, "Rewards sweeper should have zero WETH balance after sweeping"
         );
 
         // Test that sweeping rewards again should revert (no rewards to sweep)
-        vm.startPrank(deployment.actors().PROCESSOR());
+        vm.startPrank(accountingModule.safe());
         vm.expectRevert(RewardsSweeper.CannotSweepRewards.selector);
         rewardsSweeper.sweepRewards(rewardAmount);
         vm.stopPrank();
 
-        // Deal 100k USDC to rewards sweeper for next test
-        deal(USDC_ADDRESS, address(rewardsSweeper), 100_000 * 1e6);
+        // Deal 100 WETH to rewards sweeper for next test
+        deal(WETH_ADDRESS, address(rewardsSweeper), 100 * 1e18);
 
         // Advance time by only 1 hour (should be within cooldown period)
         vm.warp(block.timestamp + 1 hours);
 
         // Try to inject rewards again - should revert due to cooldown period
-        vm.startPrank(deployment.actors().PROCESSOR());
+        vm.startPrank(accountingModule.safe());
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccountingModule.AccountingLimitsExceeded.selector, 8757251505745759985, 150000000000000000
@@ -280,7 +265,7 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
         vm.stopPrank();
 
         // Call sweepRewardsUpToAPRMax
-        vm.startPrank(deployment.actors().PROCESSOR());
+        vm.startPrank(accountingModule.safe());
         uint256 sweptAmount = rewardsSweeper.sweepRewardsUpToAPRMax();
         vm.stopPrank();
 
