@@ -12,8 +12,9 @@ import {FlexStrategy} from "lib/yieldnest-flex-strategy/src/FlexStrategy.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DeployFlexStrategy, RewardsSweeper} from "lib/yieldnest-flex-strategy/script/DeployFlexStrategy.s.sol";
 import {IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {MainnetStrategyActors} from "@script/Actors.sol";
 
-contract BaseFunctionalityTest is BaseIntegrationTest {
+contract BaseFunctionalityTest is BaseIntegrationTest, MainnetStrategyActors {
     address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH token address
     uint256 public constant DEPOSIT_AMOUNT = 1000 * 10 ** 18; // 1000 WETH with 18 decimals
 
@@ -22,7 +23,7 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         // Prank as admin to grant ALLOCATOR role to DEPOSITOR
-        vm.startPrank(accountingModule.safe());
+        vm.startPrank(ADMIN);
         strategy.grantRole(strategy.ALLOCATOR_ROLE(), DEPOSITOR);
         vm.stopPrank();
     }
@@ -157,125 +158,5 @@ contract BaseFunctionalityTest is BaseIntegrationTest {
         // Assert that total supply decreased by exactly the shares that were burned
         uint256 totalSupplyAfter = strategy.totalSupply();
         assertEq(totalSupplyAfter, 0, "Total supply should be zero after complete withdrawal");
-    }
-
-    function test_deposit_and_inject_rewards_with_rewards_sweeper() public {
-        // Get WETH token and strategy
-        IERC20 weth = IERC20(WETH_ADDRESS);
-        DeployFlexStrategy deployFlexStrategy = new DeployFlexStrategy();
-        RewardsSweeper rewardsSweeper = deployFlexStrategy.rewardsSweeper();
-
-        // 1000 WETH (18 decimals) and 10 WETH reward
-        uint256 depositAmount = 1_000 * 1e18;
-        uint256 rewardAmount = 10 * 1e18;
-
-        // Deal WETH to depositor and rewards sweeper
-        deal(WETH_ADDRESS, DEPOSITOR, depositAmount);
-        deal(WETH_ADDRESS, address(rewardsSweeper), rewardAmount);
-
-        // Switch to depositor for the deposit
-        vm.startPrank(DEPOSITOR);
-
-        // Approve strategy to spend WETH
-        weth.approve(address(strategy), depositAmount);
-
-        // Get balances before deposit
-        uint256 totalAssetsBefore = strategy.totalAssets();
-        uint256 totalSupplyBefore = strategy.totalSupply();
-
-        // Perform deposit
-        uint256 shares = strategy.deposit(depositAmount, DEPOSITOR);
-
-        vm.stopPrank();
-
-        // Process accounting to update state
-        strategy.processAccounting();
-
-        // Get state after deposit
-        uint256 totalAssetsAfterDeposit = strategy.totalAssets();
-        uint256 totalSupplyAfterDeposit = strategy.totalSupply();
-
-        // Verify deposit was successful
-        assertGt(shares, 0, "Should receive shares for deposit");
-        assertEq(
-            totalAssetsAfterDeposit, totalAssetsBefore + depositAmount, "Total assets should increase by deposit amount"
-        );
-        assertEq(totalSupplyAfterDeposit, totalSupplyBefore + shares, "Total supply should increase by shares minted");
-
-        // Advance time by 1 month (30 days)
-        vm.warp(block.timestamp + 30 days);
-
-        // Inject rewards using rewards sweeper
-        vm.startPrank(accountingModule.safe());
-        rewardsSweeper.sweepRewards(rewardAmount);
-        vm.stopPrank();
-
-        // Process accounting to capture the rewards
-        strategy.processAccounting();
-
-        // Get state after rewards injection
-        uint256 totalAssetsAfterRewards = strategy.totalAssets();
-        uint256 totalSupplyAfterRewards = strategy.totalSupply();
-
-        // Verify rewards injection was successful
-        assertEq(
-            totalAssetsAfterRewards,
-            totalAssetsAfterDeposit + rewardAmount,
-            "Total assets should increase by reward amount after injection"
-        );
-        assertEq(
-            totalSupplyAfterRewards,
-            totalSupplyAfterDeposit,
-            "Total supply should remain the same after rewards injection (no new shares minted)"
-        );
-
-        // Verify the depositor can redeem more assets than they deposited due to rewards
-        uint256 redeemableAssets = strategy.previewRedeem(shares);
-        assertGt(
-            redeemableAssets,
-            depositAmount,
-            "Depositor should be able to redeem more than they deposited due to rewards"
-        );
-
-        // Verify that the rewards sweeper has no WETH balance after sweeping
-        assertEq(
-            weth.balanceOf(address(rewardsSweeper)), 0, "Rewards sweeper should have zero WETH balance after sweeping"
-        );
-
-        // Test that sweeping rewards again should revert (no rewards to sweep)
-        vm.startPrank(accountingModule.safe());
-        vm.expectRevert(RewardsSweeper.CannotSweepRewards.selector);
-        rewardsSweeper.sweepRewards(rewardAmount);
-        vm.stopPrank();
-
-        // Deal 100 WETH to rewards sweeper for next test
-        deal(WETH_ADDRESS, address(rewardsSweeper), 100 * 1e18);
-
-        // Advance time by only 1 hour (should be within cooldown period)
-        vm.warp(block.timestamp + 1 hours);
-
-        // Try to inject rewards again - should revert due to cooldown period
-        vm.startPrank(accountingModule.safe());
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccountingModule.AccountingLimitsExceeded.selector, 8757251505745759985, 150000000000000000
-            )
-        );
-        rewardsSweeper.sweepRewards(rewardAmount);
-        vm.stopPrank();
-
-        // Call sweepRewardsUpToAPRMax
-        vm.startPrank(accountingModule.safe());
-        uint256 sweptAmount = rewardsSweeper.sweepRewardsUpToAPRMax();
-        vm.stopPrank();
-
-        // Verify that some amount was swept (should be > 0 if there are rewards to sweep within APR limits)
-        assertGe(sweptAmount, 0, "Swept amount should be non-negative");
-
-        // Verify total assets increased by the swept amount
-        uint256 totalAssetsAfterSweep = strategy.totalAssets();
-        assertEq(
-            totalAssetsAfterSweep, totalAssetsAfterRewards + sweptAmount, "Total assets should increase by swept amount"
-        );
     }
 }

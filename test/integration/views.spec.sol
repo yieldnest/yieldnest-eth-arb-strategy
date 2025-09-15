@@ -84,7 +84,7 @@ contract VaultMainnetUpgradeTest is BaseIntegrationTest {
             // Test APY and timing parameters
             uint256 targetApy = accountingModule.targetApy();
 
-            assertEq(targetApy, 0.15 ether, "Target APY should be 15%");
+            assertEq(targetApy, 0.06e18, "Target APY should be 6%");
         }
 
         // Test snapshots if any exist

@@ -23,26 +23,6 @@ contract UpgradesTest is BaseIntegrationTest {
         assertEq(strategy.asset(), 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH address
     }
 
-    function testRewardsSweeperUpgrade() public {
-        // Deploy a new implementation of RewardsSweeper
-        RewardsSweeper newRewardsSweeperImplementation = new RewardsSweeper();
-
-        UpgradeUtils.timelockUpgrade(
-            deployment.timelock(),
-            deployment.actors().ADMIN(),
-            address(deployment.rewardsSweeper()),
-            address(newRewardsSweeperImplementation)
-        );
-
-        // Get implementation address from proxy
-        address currentImplementation = ProxyUtils.getImplementation(address(deployment.rewardsSweeper()));
-        assertEq(
-            currentImplementation,
-            address(newRewardsSweeperImplementation),
-            "Rewards Sweeper implementation address mismatch after upgrade"
-        );
-    }
-
     function testAccountingModuleUpgrade() public {
         // Deploy a new implementation of AccountingModule
         AccountingModule newAccountingModuleImplementation = new AccountingModule();

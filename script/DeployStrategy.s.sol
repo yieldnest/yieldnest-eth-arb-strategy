@@ -12,7 +12,6 @@ import {ProxyUtils} from "lib/yieldnest-flex-strategy/lib/yieldnest-vault/script
 import {MainnetStrategyActors} from "@script/Actors.sol";
 
 contract DeployStrategy is DeployFlexStrategy {
-
     function _setup() public virtual override {
         MainnetStrategyActors _actors = new MainnetStrategyActors();
         if (block.chainid == 1) {
@@ -39,7 +38,7 @@ contract DeployStrategy is DeployFlexStrategy {
                 allocators: _allocators,
                 safe: _actors.SAFE(),
                 alwaysComputeTotalAssets: true,
-                useRewardsSweeper: true
+                useRewardsSweeper: false
             })
         );
     }
