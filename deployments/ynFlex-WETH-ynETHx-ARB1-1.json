@@ -1,0 +1,19 @@
+{
+  "admin": "0xfcad670592a3b24869C0b51a6c6FDED4F95D6975",
+  "baseAsset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  "deployer": "0x728086662f6d83EED41606f0eC0Dc0F45217EBA6",
+  "rateProvider": "0xCfab47682D94454395fF3a24EfaCb04001f78bEc",
+  "safe": "0x8eE2dd06404C96A62a47cc6D8A54B1a2f7A27013",
+  "symbol": "ynFlex-WETH-ynETHx-ARB1",
+  "timelock": "0x5EA4Bc22c6112E2C5fdD9dd7537Cb608f9705A63",
+  "useRewardsSweeper": false,
+  "ynFlex-WETH-ynETHx-ARB1-accountingModule-implementation": "0xA701Fad8d24604244EDb4bd4f79D52a78A35d325",
+  "ynFlex-WETH-ynETHx-ARB1-accountingModule-proxy": "0x3d4d32ca048ea7b844fC33C39FE16F2a22402e8d",
+  "ynFlex-WETH-ynETHx-ARB1-accountingModule-proxyAdmin": "0xDAE74444fa9978fA305506F4c5626a44dd3dc9f6",
+  "ynFlex-WETH-ynETHx-ARB1-accountingToken-implementation": "0xF24A0c2473b1a5941b495a84b3564B16cC2dC141",
+  "ynFlex-WETH-ynETHx-ARB1-accountingToken-proxy": "0xD56dccdF5F3971Cb8Cc56648D1C104EbcAe8Ff3E",
+  "ynFlex-WETH-ynETHx-ARB1-accountingToken-proxyAdmin": "0x6F3Ee8ac57480b66D18193f4d2cF2c977AF36aD1",
+  "ynFlex-WETH-ynETHx-ARB1-implementation": "0x1b1EdDF9d1cD632Fa411fbCE3d7e36aA4Bb7d766",
+  "ynFlex-WETH-ynETHx-ARB1-proxy": "0x90a8FF2709DbD9Cb02e8B6FA28386fB57Bd7B67b",
+  "ynFlex-WETH-ynETHx-ARB1-proxyAdmin": "0x37e21185136b27C5e633d2B4967c783Ce7138eeF"
+}
