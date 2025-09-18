@@ -18,9 +18,7 @@ REWARDS_SWEEPER_ADDRESS=$(jq -r ".\"${STRATEGY_NAME}-rewardsSweeper-implementati
 # Verify contracts
 forge verify-bytecode --etherscan-api-key "$ETHERSCAN_API_KEY" "$ACCOUNTING_MODULE_ADDRESS" AccountingModule:AccountingModule --rpc-url "$RPC_URL"
 
-forge verify-bytecode --etherscan-api-key "$ETHERSCAN_API_KEY" "$ACCOUNTING_TOKEN_ADDRESS" AccountingToken:AccountingToken --rpc-url "$RPC_URL"
+forge verify-bytecode --encoded-constructor-args $(cast abi-encode "constructor(address)" 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) --etherscan-api-key "$ETHERSCAN_API_KEY" "$ACCOUNTING_TOKEN_ADDRESS" AccountingToken:AccountingToken --rpc-url "$RPC_URL"
 
 forge verify-bytecode --etherscan-api-key "$ETHERSCAN_API_KEY" "$FLEX_STRATEGY_ADDRESS" FlexStrategy:FlexStrategy --rpc-url "$RPC_URL"
-
-forge verify-bytecode --etherscan-api-key "$ETHERSCAN_API_KEY" "$REWARDS_SWEEPER_ADDRESS" RewardsSweeper:RewardsSweeper --rpc-url "$RPC_URL"
 
