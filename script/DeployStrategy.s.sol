@@ -28,7 +28,7 @@ contract DeployStrategy is DeployFlexStrategy {
                 symbol_: "ynFlex-WETH-ynETHx-ARB1",
                 accountTokenName: "YieldNest Flex Strategy - ynETHx - ARB1 Accounting Token",
                 accountTokenSymbol: "ynFlexWETH-ynETHx-ARB1-Tok",
-                decimals: 18, // 6 decimals for WETH
+                decimals: 18, // 18 decimals for WETH
                 paused: true,
                 targetApy: 0.06 ether, // max 6% rewards per year
                 lowerBound: 0.0001 ether, // Ability to mark 0.01% of TVL as losses
