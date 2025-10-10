@@ -13,11 +13,10 @@ import {IActors} from "@yieldnest-vault-script/Actors.sol";
 import {IContracts} from "@yieldnest-vault-script/Contracts.sol";
 import {L1Contracts} from "@yieldnest-vault-script/Contracts.sol";
 import {IVault} from "@yieldnest-vault/interface/IVault.sol";
+import {MainnetContracts as MC} from "lib/yieldnest-flex-strategy/lib/yieldnest-vault/script/Contracts.sol";
 
 // forge script VerifyFlexStrategy --rpc-url <MAINNET_RPC_URL>
 contract VerifyStrategy is VerifyFlexStrategy {
-    address public YNRWAX = 0x01Ba69727E2860b37bc1a2bd56999c1aFb4C15D8;
-
     function _setup() public virtual override {
         MainnetStrategyActors _actors = new MainnetStrategyActors();
         if (block.chainid == 1) {
@@ -28,7 +27,7 @@ contract VerifyStrategy is VerifyFlexStrategy {
         }
 
         address[] memory _allocators = new address[](1);
-        _allocators[0] = YNRWAX;
+        _allocators[0] = MC.YNETHX;
 
         setVerificationParameters(
             VerifyFlexStrategy.VerificationParameters({
@@ -42,7 +41,7 @@ contract VerifyStrategy is VerifyFlexStrategy {
                 lowerBound: 0.0001 ether, // Ability to mark 0.01% of TVL as losses
                 minRewardableAssets: 1e18, // min 1 ETH
                 accountingProcessor: _actors.PROCESSOR(),
-                baseAsset: IVault(YNRWAX).asset(),
+                baseAsset: IVault(MC.YNETHX).asset(),
                 allocators: _allocators,
                 alwaysComputeTotalAssets: true
             })

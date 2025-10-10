@@ -5,13 +5,12 @@ import {Test} from "forge-std/Test.sol";
 import {BaseIntegrationTest} from "./BaseIntegrationTest.sol";
 import {DeployStrategy} from "@script/DeployStrategy.s.sol";
 import {BaseScript} from "lib/yieldnest-flex-strategy/script/BaseScript.sol";
+import {VerifyStrategy} from "@script/VerifyStrategy.s.sol";
 
 contract FlexStrategyDeployment is BaseIntegrationTest {
     function test_verify_setup() public {
-        DeployStrategy verify = new DeployStrategy();
+        VerifyStrategy verify = new VerifyStrategy();
         verify.setEnv(BaseScript.Env.TEST);
         verify.run();
     }
-
-    // TODO: add test for upgrade
 }
