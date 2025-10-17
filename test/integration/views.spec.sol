@@ -3,23 +3,23 @@ pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {BaseIntegrationTest} from "./BaseIntegrationTest.sol";
-import {VerifyRWAStrategy} from "@script/VerifyRWAStrategy.s.sol";
 import {BaseScript} from "lib/yieldnest-flex-strategy/script/BaseScript.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IAccountingModule} from "lib/yieldnest-flex-strategy/src/AccountingModule.sol";
 import {FlexStrategy} from "lib/yieldnest-flex-strategy/src/FlexStrategy.sol";
+import {MainnetStrategyActors} from "@script/Actors.sol";
 
 contract VaultMainnetUpgradeTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
     }
 
-    function test_usdc_ynrwax_spv1_views() public view {
-        // Get USDC token and strategy
-        IERC20 usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC on mainnet
+    function test_weth_ynethx_arb1_views() public view {
+        // Get WETH token and strategy
+        IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH on mainnet
 
         // Test asset and share conversions
-        uint256 testAmount = 1000 * 1e6; // 1000 USDC
+        uint256 testAmount = 1000 * 1e18; // 1000 WETH
         {
             uint256 previewDeposit = strategy.previewDeposit(testAmount);
             uint256 previewMint = strategy.previewMint(previewDeposit);
@@ -52,7 +52,7 @@ contract VaultMainnetUpgradeTest is BaseIntegrationTest {
             assertEq(maxRedeem, 0, "Max redeem should be 0 for user with no shares");
 
             // Test asset and share relationship
-            assertEq(strategy.asset(), address(usdc), "Asset should be USDC");
+            assertEq(strategy.asset(), address(weth), "Asset should be WETH");
         }
 
         {
@@ -65,35 +65,39 @@ contract VaultMainnetUpgradeTest is BaseIntegrationTest {
                 convertToAssets, testAmount, 1, "Convert to assets should be approximately equal to original amount"
             );
 
-            assertGe(convertToAssets, 1e6, "Convert to assets should return a value greater than 1e6");
+            assertGe(convertToAssets, 1e18, "Convert to assets should return a value greater than 1e18");
         }
 
-        // Get AccountingModule from deployment
-        IAccountingModule accountingModule = IAccountingModule(address(deployment.accountingModule()));
+        // Get AccountingModule from strategy
+        IAccountingModule accountingModule = strategy.accountingModule();
 
         {
             // Test AccountingModule view functions
             assertEq(accountingModule.strategy(), address(strategy), "AccountingModule strategy should match");
-            assertEq(accountingModule.baseAsset(), address(usdc), "AccountingModule base asset should be USDC");
-            assertEq(accountingModule.safe(), deployment.safe(), "AccountingModule safe should match deployment safe");
+            assertEq(accountingModule.baseAsset(), address(weth), "AccountingModule base asset should be WETH");
+            assertEq(
+                accountingModule.safe(),
+                MainnetStrategyActors(address(deployment.actors())).SAFE(),
+                "AccountingModule safe should match deployment safe"
+            );
 
             // Test APY and timing parameters
             uint256 targetApy = accountingModule.targetApy();
 
-            assertEq(targetApy, 0.15 ether, "Target APY should be 15%");
+            assertEq(targetApy, 0.06e18, "Target APY should be 6%");
         }
 
         // Test snapshots if any exist
         uint256 snapshotsLength = accountingModule.snapshotsLength();
         if (snapshotsLength > 0) {
             IAccountingModule.StrategySnapshot memory latestSnapshot = accountingModule.snapshots(snapshotsLength - 1);
-            assertGe(latestSnapshot.pricePerShare, 1e6, "Latest snapshot price per share should be greater than 0");
+            assertGe(latestSnapshot.pricePerShare, 1e18, "Latest snapshot price per share should be greater than 0");
             assertGt(latestSnapshot.timestamp, 0, "Latest snapshot timestamp should be greater than 0");
         }
 
         // Test constants
         assertEq(accountingModule.YEAR(), 365.25 days, "YEAR constant should be 365.25 days");
-        assertEq(accountingModule.DIVISOR(), 1e18, "DIVISOR constant should be 10000");
+        assertEq(accountingModule.DIVISOR(), 1e18, "DIVISOR constant should be 1e18");
 
         // Test lower bound
         uint256 lowerBound = accountingModule.lowerBound();
